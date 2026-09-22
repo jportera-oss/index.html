@@ -1,0 +1,1134 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<style>
+  :root{
+    --ink:#111a22;
+    --ink-soft:#3c4a58;
+    --paper:#eef1f3;
+    --paper-raised:#ffffff;
+    --line:#c7cfd6;
+    --line-strong:#111a22;
+    --slate:#3a5a72;
+    --slate-deep:#22384a;
+    --amber:#b8722a;
+    --amber-soft:#f4e3cf;
+    --green:#2f6b4f;
+    --green-soft:#dcece2;
+    --red:#a13f2f;
+    --red-soft:#f4dfd9;
+    --mono:'IBM Plex Mono','SFMono-Regular',Consolas,monospace;
+    --sans:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  *{box-sizing:border-box;}
+  #cmt-root{
+    font-family:var(--sans);
+    color:var(--ink);
+    background:var(--paper);
+    padding:28px;
+    max-width:980px;
+    margin:0 auto;
+    line-height:1.45;
+  }
+  #cmt-root h1{
+    font-size:22px;
+    font-weight:700;
+    letter-spacing:-0.01em;
+    margin:0 0 4px;
+  }
+  #cmt-root .sub{
+    color:var(--ink-soft);
+    font-size:13.5px;
+    margin:0 0 22px;
+    max-width:58ch;
+  }
+  .cmt-ledger-num{
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--ink-soft);
+    letter-spacing:0.02em;
+  }
+
+  .cmt-section{
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:3px;
+    margin-bottom:18px;
+    overflow:hidden;
+  }
+  .cmt-section-head{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:12px;
+    padding:14px 18px;
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#fbfcfc,#f5f7f8);
+  }
+  .cmt-section-head h2{
+    font-size:14.5px;
+    font-weight:600;
+    margin:0;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .cmt-section-head .cmt-ledger-num{ color:var(--slate); }
+  .cmt-section-body{ padding:18px; }
+  .cmt-hint{ font-size:12.5px; color:var(--ink-soft); margin:2px 0 14px; }
+
+  .cmt-drop{
+    border:1.5px dashed var(--line);
+    border-radius:3px;
+    padding:22px 16px;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .15s, background .15s;
+    background:#fbfbfc;
+  }
+  .cmt-drop:hover, .cmt-drop.cmt-drag{
+    border-color:var(--slate);
+    background:#f1f5f7;
+  }
+  .cmt-drop input{ display:none; }
+  .cmt-drop .cmt-drop-label{
+    font-size:13px;
+    font-weight:500;
+    color:var(--slate-deep);
+  }
+  .cmt-drop .cmt-drop-sub{
+    font-size:11.5px;
+    color:var(--ink-soft);
+    margin-top:3px;
+  }
+
+  .cmt-file-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:10px 12px;
+    border:1px solid var(--line);
+    border-radius:3px;
+    background:#fbfbfc;
+    margin-top:8px;
+    font-size:13px;
+  }
+  .cmt-file-row .cmt-file-name{
+    font-family:var(--mono);
+    font-size:12px;
+    font-weight:500;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .cmt-file-row .cmt-file-meta{ color:var(--ink-soft); font-size:11.5px; flex-shrink:0; }
+  .cmt-x-btn{
+    border:none; background:none; cursor:pointer; color:var(--ink-soft);
+    font-size:15px; line-height:1; padding:2px 4px; flex-shrink:0;
+  }
+  .cmt-x-btn:hover{ color:var(--red); }
+
+  .cmt-latest-card{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:14px;
+    padding:14px;
+    border:1px solid var(--slate);
+    border-radius:3px;
+    background:#eef4f6;
+    margin-bottom:14px;
+  }
+  .cmt-latest-card .cmt-latest-label{
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--slate-deep);
+    font-weight:600;
+    margin-bottom:4px;
+  }
+  .cmt-latest-card .cmt-latest-name{
+    font-family:var(--mono);
+    font-size:13px;
+    font-weight:600;
+    word-break:break-all;
+  }
+  .cmt-latest-card .cmt-latest-meta{
+    font-size:11.5px;
+    color:var(--ink-soft);
+    margin-top:2px;
+  }
+
+  .cmt-radio-row{ display:flex; gap:18px; margin-bottom:14px; flex-wrap:wrap; }
+  .cmt-radio-opt{ display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer; }
+  .cmt-radio-opt input{ accent-color:var(--slate-deep); cursor:pointer; }
+
+  .cmt-col-map{ display:flex; gap:14px; flex-wrap:wrap; margin-top:12px; }
+  .cmt-col-map label{ font-size:11.5px; color:var(--ink-soft); display:block; margin-bottom:4px; }
+  .cmt-col-map select{
+    font-family:var(--sans);
+    font-size:12.5px;
+    padding:6px 8px;
+    border:1px solid var(--line);
+    border-radius:3px;
+    background:#fff;
+    min-width:170px;
+  }
+
+  .cmt-field-select-wrap{ margin-top:16px; }
+  .cmt-field-select-label{
+    font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
+    color:var(--slate-deep); font-weight:600; margin-bottom:8px;
+  }
+  .cmt-field-grid{
+    display:flex; flex-wrap:wrap; gap:8px;
+  }
+  .cmt-field-chip{
+    display:flex; align-items:center; gap:7px;
+    border:1px solid var(--line); border-radius:3px;
+    padding:8px 12px; background:#fbfbfc; cursor:pointer;
+    font-size:12.5px; transition:border-color .15s, background .15s;
+    user-select:none;
+  }
+  .cmt-field-chip:hover{ border-color:var(--slate); }
+  .cmt-field-chip.checked{
+    border-color:var(--slate-deep); background:#eaf0f2; font-weight:600;
+  }
+  .cmt-field-chip input{ accent-color:var(--slate-deep); cursor:pointer; margin:0; }
+  .cmt-field-chip .cmt-field-name{ font-family:var(--mono); }
+  .cmt-field-count-note{ font-size:11.5px; color:var(--ink-soft); margin-top:8px; }
+  .cmt-field-count-note.cmt-err{ color:var(--red); }
+
+  .cmt-btn{
+    font-family:var(--sans);
+    font-size:13.5px;
+    font-weight:600;
+    padding:11px 20px;
+    border-radius:3px;
+    border:1px solid var(--ink);
+    background:var(--ink);
+    color:#fff;
+    cursor:pointer;
+    transition:transform .08s, background .15s;
+  }
+  .cmt-btn:hover:not(:disabled){ background:var(--slate-deep); }
+  .cmt-btn:active:not(:disabled){ transform:scale(0.98); }
+  .cmt-btn:disabled{ opacity:0.4; cursor:not-allowed; }
+  .cmt-btn.cmt-btn-ghost{
+    background:transparent; color:var(--ink); border:1px solid var(--line-strong);
+  }
+  .cmt-btn.cmt-btn-ghost:hover:not(:disabled){ background:#eef1f3; }
+  .cmt-btn.cmt-btn-sm{ padding:7px 12px; font-size:12px; }
+
+  .cmt-actions-row{ display:flex; align-items:center; gap:12px; margin-top:16px; flex-wrap:wrap; }
+
+  .cmt-status-line{ font-size:12.5px; color:var(--ink-soft); }
+  .cmt-status-line.cmt-ok{ color:var(--green); }
+  .cmt-status-line.cmt-err{ color:var(--red); }
+
+  .cmt-results-summary{
+    display:flex; gap:22px; flex-wrap:wrap;
+    padding:14px 18px; border-bottom:1px solid var(--line);
+    background:#fbfcfc;
+  }
+  .cmt-stat{ display:flex; flex-direction:column; }
+  .cmt-stat .cmt-stat-num{ font-family:var(--mono); font-size:20px; font-weight:600; }
+  .cmt-stat .cmt-stat-label{ font-size:10.5px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-soft); margin-top:2px; }
+
+  table.cmt-table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  table.cmt-table th{
+    text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:0.04em;
+    color:var(--ink-soft); font-weight:600; padding:8px 10px; border-bottom:1px solid var(--line-strong);
+  }
+  table.cmt-table td{ padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  table.cmt-table tr:last-child td{ border-bottom:none; }
+  .cmt-file-cell{ font-family:var(--mono); font-weight:500; }
+  .cmt-badge{
+    display:inline-block; font-family:var(--mono); font-size:11px; font-weight:600;
+    padding:2px 7px; border-radius:10px;
+  }
+  .cmt-badge.ok{ background:var(--green-soft); color:var(--green); }
+  .cmt-badge.warn{ background:var(--amber-soft); color:var(--amber); }
+  .cmt-badge.err{ background:var(--red-soft); color:var(--red); }
+  .cmt-sheet-note{ font-size:11.5px; color:var(--ink-soft); margin-top:3px; }
+  .cmt-unmatched-toggle{
+    background:none; border:none; color:var(--slate); cursor:pointer;
+    font-size:11.5px; text-decoration:underline; padding:0; margin-top:4px;
+  }
+  .cmt-unmatched-list{
+    font-family:var(--mono); font-size:11px; color:var(--red);
+    margin-top:5px; padding:8px; background:var(--red-soft); border-radius:3px;
+    display:none; max-height:120px; overflow-y:auto;
+  }
+  .cmt-unmatched-list.open{ display:block; }
+
+  .cmt-empty-note{
+    font-size:12.5px; color:var(--ink-soft); font-style:italic; padding:6px 0;
+  }
+
+  @media (max-width:640px){
+    #cmt-root{ padding:16px; }
+    .cmt-col-map{ flex-direction:column; }
+    .cmt-col-map select{ width:100%; }
+  }
+</style>
+
+<div id="cmt-root">
+  <h1>Attendance × Employee List Merge Tool</h1>
+  <p class="sub">Matches each Attendance Report to the Employee List by Employee ID, then adds the employee data fields you choose — Client Name and/or anything else in the Employee List — each as its own column. Names are never used for matching.</p>
+
+  <!-- SECTION 1: EMPLOYEE LIST -->
+  <div class="cmt-section">
+    <div class="cmt-section-head">
+      <h2><span class="cmt-ledger-num">01</span> Employee List Report</h2>
+    </div>
+    <div class="cmt-section-body">
+      <div id="cmt-latest-wrap"></div>
+      <div id="cmt-emp-radio-wrap"></div>
+      <div id="cmt-emp-upload-wrap">
+        <div class="cmt-drop" id="cmt-emp-drop">
+          <input type="file" id="cmt-emp-input" accept=".xlsx,.xls,.csv" />
+          <div class="cmt-drop-label">Click to upload the Employee List Report</div>
+          <div class="cmt-drop-sub">.xlsx or .xls — used as the single reference file</div>
+        </div>
+      </div>
+      <div id="cmt-emp-status" class="cmt-status-line" style="margin-top:10px;"></div>
+      <div id="cmt-emp-colmap" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- SECTION 2: ATTENDANCE REPORTS -->
+  <div class="cmt-section">
+    <div class="cmt-section-head">
+      <h2><span class="cmt-ledger-num">02</span> Attendance Reports</h2>
+    </div>
+    <div class="cmt-section-body">
+      <p class="cmt-hint">Upload one or more. Each is processed independently and returned as its own file, with the same structure plus one new column for every field you selected above.</p>
+      <div class="cmt-drop" id="cmt-att-drop">
+        <input type="file" id="cmt-att-input" accept=".xlsx,.xls,.csv" multiple />
+        <div class="cmt-drop-label">Click to upload Attendance Report file(s)</div>
+        <div class="cmt-drop-sub">.xlsx or .xls — multiple files allowed</div>
+      </div>
+      <div id="cmt-att-list"></div>
+    </div>
+  </div>
+
+  <!-- SECTION 3: SORT ORDER -->
+  <div class="cmt-section">
+    <div class="cmt-section-head">
+      <h2><span class="cmt-ledger-num">03</span> Row Order in Output</h2>
+    </div>
+    <div class="cmt-section-body">
+      <div class="cmt-radio-row" id="cmt-sort-radio-wrap">
+        <label class="cmt-radio-opt"><input type="radio" name="cmt-sort-mode" value="original" checked> Keep current order (as in the original Attendance Report)</label>
+        <label class="cmt-radio-opt"><input type="radio" name="cmt-sort-mode" value="client_az"> Sort by Client Name (A→Z)</label>
+      </div>
+      <div class="cmt-status-line" id="cmt-sort-note"></div>
+    </div>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="cmt-actions-row">
+    <button class="cmt-btn" id="cmt-generate-btn" disabled>Generate Reports</button>
+    <span class="cmt-status-line" id="cmt-generate-status"></span>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="cmt-section" id="cmt-results-section" style="display:none; margin-top:22px;">
+    <div class="cmt-section-head">
+      <h2><span class="cmt-ledger-num">04</span> Results</h2>
+      <button class="cmt-btn cmt-btn-sm cmt-btn-ghost" id="cmt-download-all-btn" style="display:none;">Download all (.zip)</button>
+    </div>
+    <div class="cmt-results-summary" id="cmt-results-summary"></div>
+    <div class="cmt-section-body" style="padding:0;">
+      <table class="cmt-table">
+        <thead>
+          <tr><th>File</th><th>Sheets processed</th><th>Matched</th><th>Unmatched</th><th></th></tr>
+        </thead>
+        <tbody id="cmt-results-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+
+  // ---------- constants ----------
+  var ID_HEADER_PATTERNS = ['id no','id no.','id number','employee id','emp id','empid','id','id#','employee no','employee number'];
+  var ID_LABEL_PATTERNS = ['id number:','id no:','id no.:','employee id:','emp id:'];
+  var STORAGE_KEY = 'employeeList:latest';
+
+  var state = {
+    employeeSource: null,        // 'latest' | 'new'
+    empHeaders: [],
+    empRows: [],
+    empIdIdx: -1,
+    fieldIdxs: [],                // indices (into empHeaders) of columns to add to the Attendance Report
+    dataMap: null,                // Map<normalizedId, array of values aligned with fieldIdxs>
+    fieldNames: [],               // header labels aligned with fieldIdxs
+    clientColIdx: -1,             // index of a detected "Client Name"-like column, for sorting
+    clientSortMap: null,          // Map<normalizedId, clientName> used only for sort ordering
+    sortMode: 'original',         // 'original' | 'client_az'
+    empFileName: '',
+    empUploadedAt: '',
+    attendanceFiles: []          // [{file, name}]
+  };
+
+  // ---------- helpers ----------
+  function norm(v){
+    if (v === null || v === undefined) return '';
+    return String(v).trim();
+  }
+  function normKey(v){ return norm(v).toUpperCase(); }
+
+  function readFileAsArrayBuffer(file){
+    return new Promise(function(resolve, reject){
+      var reader = new FileReader();
+      reader.onload = function(e){ resolve(e.target.result); };
+      reader.onerror = function(){ reject(new Error('Could not read ' + file.name)); };
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  function parseWorkbook(arrayBuffer){
+    var data = new Uint8Array(arrayBuffer);
+    return XLSX.read(data, { type: 'array' });
+  }
+
+  function sheetToAOA(ws){
+    return XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
+  }
+
+  function padRows(aoa){
+    var maxLen = 0;
+    for (var i = 0; i < aoa.length; i++) if (aoa[i].length > maxLen) maxLen = aoa[i].length;
+    return aoa.map(function(r){
+      var row = r.slice();
+      while (row.length < maxLen) row.push('');
+      return row;
+    });
+  }
+
+  function findTabularHeader(aoa){
+    var scanRows = Math.min(aoa.length, 15);
+    for (var r = 0; r < scanRows; r++){
+      var row = aoa[r];
+      for (var c = 0; c < row.length; c++){
+        var cell = norm(row[c]).toLowerCase();
+        if (ID_HEADER_PATTERNS.indexOf(cell) !== -1){
+          return { headerRow: r, idCol: c };
+        }
+      }
+    }
+    return null;
+  }
+
+  // dataMap: Map<normalizedId, array of values>, fieldNames: array of column labels (same order/length)
+  function processTabularSheet(aoa, dataMap, fieldNames){
+    var found = findTabularHeader(aoa);
+    if (!found) return { changed: false, aoa: aoa, matched: 0, unmatched: 0, unmatchedIds: [] };
+    var headerRow = found.headerRow, idCol = found.idCol;
+    var padded = padRows(aoa);
+
+    // If a selected field's name collides with a header already in this sheet,
+    // label the new column distinctly so it's clear which is which.
+    var existingHeadersLower = padded[headerRow].map(function(h){ return norm(h).toLowerCase(); });
+    var displayFieldNames = fieldNames.map(function(fn){
+      return existingHeadersLower.indexOf(fn.toLowerCase()) !== -1 ? fn + ' (Employee List)' : fn;
+    });
+
+    var matched = 0, unmatched = 0, unmatchedIds = [];
+    var out = padded.map(function(row, r){
+      var newRow = row.slice();
+      var insertVals;
+      if (r === headerRow){
+        insertVals = displayFieldNames.slice();
+      } else if (r < headerRow){
+        insertVals = fieldNames.map(function(){ return ''; });
+      } else {
+        var idVal = normKey(row[idCol]);
+        if (idVal === ''){
+          insertVals = fieldNames.map(function(){ return ''; });
+        } else if (dataMap.has(idVal)){
+          insertVals = dataMap.get(idVal).slice();
+          matched++;
+        } else {
+          insertVals = fieldNames.map(function(){ return 'Not Found'; });
+          unmatched++;
+          if (unmatchedIds.indexOf(norm(row[idCol])) === -1) unmatchedIds.push(norm(row[idCol]));
+        }
+      }
+      var args = [idCol + 1, 0].concat(insertVals);
+      Array.prototype.splice.apply(newRow, args);
+      return newRow;
+    });
+    return { changed: true, aoa: out, matched: matched, unmatched: unmatched, unmatchedIds: unmatchedIds, headerRow: headerRow, idCol: idCol };
+  }
+
+  function processBlockSheet(aoa, dataMap, fieldNames){
+    var matched = 0, unmatched = 0, changedAny = false, unmatchedIds = [];
+    var pairSpan = fieldNames.length * 2; // label + value per field
+    var out = aoa.map(function(row){
+      if (!row || row.length === 0) return row;
+      var first = norm(row[0]).toLowerCase();
+      if (ID_LABEL_PATTERNS.indexOf(first) !== -1){
+        var idVal = normKey(row[1]);
+        if (idVal === '') return row;
+        var newRow = row.slice();
+        var minLen = 2 + pairSpan;
+        while (newRow.length < minLen) newRow.push('');
+        // only proceed if the target region is currently empty, to avoid clobbering existing data
+        var regionEmpty = true;
+        for (var k = 2; k < minLen; k++){ if (norm(newRow[k]) !== '') { regionEmpty = false; break; } }
+        if (regionEmpty){
+          var values;
+          var isMatch = dataMap.has(idVal);
+          if (isMatch){
+            values = dataMap.get(idVal);
+            matched++;
+          } else {
+            values = fieldNames.map(function(){ return 'Not Found'; });
+            unmatched++;
+            if (unmatchedIds.indexOf(norm(row[1])) === -1) unmatchedIds.push(norm(row[1]));
+          }
+          for (var i = 0; i < fieldNames.length; i++){
+            newRow[2 + i * 2] = fieldNames[i] + ':';
+            newRow[3 + i * 2] = values[i];
+          }
+          changedAny = true;
+          return newRow;
+        }
+      }
+      return row;
+    });
+    return { changed: changedAny, aoa: out, matched: matched, unmatched: unmatched, unmatchedIds: unmatchedIds };
+  }
+
+  // ---------- sorting ----------
+  var BLOCK_START_PATTERNS = ['name:', 'employee name:', 'employee:'];
+
+  function detectClientColumn(headers, idIdx){
+    var lower = headers.map(function(h){ return norm(h).toLowerCase(); });
+    for (var i = 0; i < lower.length; i++){
+      if (i === idIdx) continue;
+      if (lower[i].indexOf('client') !== -1) return i;
+    }
+    return -1;
+  }
+
+  function buildClientSortMap(rows, idIdx, clientColIdx){
+    var map = new Map();
+    if (clientColIdx === -1) return map;
+    for (var r = 0; r < rows.length; r++){
+      var id = normKey(rows[r][idIdx]);
+      if (id === '' || map.has(id)) continue;
+      map.set(id, norm(rows[r][clientColIdx]));
+    }
+    return map;
+  }
+
+  function compareForSort(a, b){
+    var an = norm(a), bn = norm(b);
+    var aEmpty = an === '' || an.toLowerCase() === 'not found';
+    var bEmpty = bn === '' || bn.toLowerCase() === 'not found';
+    if (aEmpty && bEmpty) return 0;
+    if (aEmpty) return 1;
+    if (bEmpty) return -1;
+    return an.localeCompare(bn, undefined, { sensitivity: 'base' });
+  }
+
+  // Sorts only the data-row region of a tabular sheet (below the header), by Client Name.
+  function sortTabularRows(aoa, headerRow, idCol, clientSortMap){
+    var head = aoa.slice(0, headerRow + 1);
+    var dataRows = aoa.slice(headerRow + 1);
+    var decorated = dataRows.map(function(row){
+      var id = normKey(row[idCol]);
+      return { row: row, key: clientSortMap.has(id) ? clientSortMap.get(id) : '' };
+    });
+    decorated.sort(function(a, b){ return compareForSort(a.key, b.key); });
+    return head.concat(decorated.map(function(d){ return d.row; }));
+  }
+
+  function findBlockStarts(aoa){
+    var starts = [];
+    for (var r = 0; r < aoa.length; r++){
+      var first = norm(aoa[r][0]).toLowerCase();
+      if (BLOCK_START_PATTERNS.indexOf(first) !== -1) starts.push(r);
+    }
+    return starts;
+  }
+
+  function findIdInBlock(blockRows){
+    for (var i = 0; i < blockRows.length; i++){
+      var first = norm(blockRows[i][0]).toLowerCase();
+      if (ID_LABEL_PATTERNS.indexOf(first) !== -1) return normKey(blockRows[i][1]);
+    }
+    return '';
+  }
+
+  // Sorts whole per-employee blocks (e.g. Name:/ID Number:/daily rows) by Client Name.
+  // Returns changed:false if this sheet doesn't use a recognizable block layout.
+  function sortBlockRows(aoa, clientSortMap){
+    var starts = findBlockStarts(aoa);
+    if (starts.length === 0) return { changed: false, aoa: aoa };
+    var preamble = aoa.slice(0, starts[0]);
+    var blocks = [];
+    for (var i = 0; i < starts.length; i++){
+      var begin = starts[i];
+      var end = (i + 1 < starts.length) ? starts[i + 1] : aoa.length;
+      blocks.push(aoa.slice(begin, end));
+    }
+    var decorated = blocks.map(function(b){
+      var id = findIdInBlock(b);
+      return { block: b, key: clientSortMap.has(id) ? clientSortMap.get(id) : '' };
+    });
+    decorated.sort(function(a, b){ return compareForSort(a.key, b.key); });
+    var result = preamble.slice();
+    decorated.forEach(function(d){ result = result.concat(d.block); });
+    return { changed: true, aoa: result };
+  }
+
+  function detectEmpIdColumn(headers){
+    var lower = headers.map(function(h){ return norm(h).toLowerCase(); });
+    for (var i = 0; i < lower.length; i++){
+      if (lower[i] === 'employee id' || lower[i] === 'id' || lower[i].indexOf('employee id') !== -1 || lower[i].indexOf('emp id') !== -1 || lower[i] === 'id no' || lower[i] === 'id number'){
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  function detectDefaultFieldIdxs(headers, idIdx){
+    var lower = headers.map(function(h){ return norm(h).toLowerCase(); });
+    var defaults = [];
+    for (var i = 0; i < lower.length; i++){
+      if (i === idIdx) continue;
+      if (lower[i].indexOf('client') !== -1) defaults.push(i);
+    }
+    return defaults;
+  }
+
+  // Builds Map<normalizedId, array of values> where the array is aligned to fieldIdxs order
+  function buildDataMap(rows, idIdx, fieldIdxs){
+    var map = new Map();
+    for (var r = 0; r < rows.length; r++){
+      var id = normKey(rows[r][idIdx]);
+      if (id === '') continue;
+      if (map.has(id)) continue; // first occurrence wins
+      var values = fieldIdxs.map(function(fi){ return norm(rows[r][fi]); });
+      map.set(id, values);
+    }
+    return map;
+  }
+
+  function generateOutputFilename(original){
+    var dot = original.lastIndexOf('.');
+    if (dot === -1) return original + '_Processed';
+    return original.slice(0, dot) + '_Processed' + original.slice(dot);
+  }
+
+  function downloadBlob(blob, filename){
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+  }
+
+  // ---------- DOM refs ----------
+  var $ = function(id){ return document.getElementById(id); };
+  var latestWrap = $('cmt-latest-wrap');
+  var empRadioWrap = $('cmt-emp-radio-wrap');
+  var empUploadWrap = $('cmt-emp-upload-wrap');
+  var empStatus = $('cmt-emp-status');
+  var empColmap = $('cmt-emp-colmap');
+  var empDrop = $('cmt-emp-drop');
+  var empInput = $('cmt-emp-input');
+  var attDrop = $('cmt-att-drop');
+  var attInput = $('cmt-att-input');
+  var attList = $('cmt-att-list');
+  var generateBtn = $('cmt-generate-btn');
+  var generateStatus = $('cmt-generate-status');
+  var sortRadioWrap = $('cmt-sort-radio-wrap');
+  var sortNote = $('cmt-sort-note');
+  var resultsSection = $('cmt-results-section');
+  var resultsSummary = $('cmt-results-summary');
+  var resultsBody = $('cmt-results-body');
+  var downloadAllBtn = $('cmt-download-all-btn');
+
+  var lastOutputs = []; // {filename, blob}
+
+  // ---------- storage ----------
+  function loadLatestFromStorage(){
+    if (!window.storage) return Promise.resolve(null);
+    return window.storage.get(STORAGE_KEY, false).then(function(res){
+      if (!res || !res.value) return null;
+      try { return JSON.parse(res.value); } catch(e){ return null; }
+    }).catch(function(){ return null; });
+  }
+
+  function saveLatestToStorage(payload){
+    if (!window.storage) return Promise.resolve(null);
+    return window.storage.set(STORAGE_KEY, JSON.stringify(payload), false).catch(function(){ return null; });
+  }
+
+  function recomputeDataMap(){
+    state.fieldNames = state.fieldIdxs.map(function(i){ return norm(state.empHeaders[i]) || ('Column ' + (i + 1)); });
+    state.dataMap = buildDataMap(state.empRows, state.empIdIdx, state.fieldIdxs);
+    state.clientColIdx = detectClientColumn(state.empHeaders, state.empIdIdx);
+    state.clientSortMap = buildClientSortMap(state.empRows, state.empIdIdx, state.clientColIdx);
+    updateSortAvailability();
+  }
+
+  function finalizeEmployeeData(headers, rows, idIdx, fieldIdxs, fileName, uploadedAt){
+    state.empHeaders = headers;
+    state.empRows = rows;
+    state.empIdIdx = idIdx;
+    state.fieldIdxs = fieldIdxs.slice();
+    state.empFileName = fileName;
+    state.empUploadedAt = uploadedAt;
+    recomputeDataMap();
+    renderFieldSelector();
+    updateEmpStatus();
+    updateGenerateEnabled();
+  }
+
+  function renderFieldSelector(){
+    var html = '<p class="cmt-hint" style="margin-top:14px;">These tell the tool where to <em>read</em> data from in this Employee List file. They don\'t remove or replace anything in the Attendance Report — every field you select is added as a brand-new column there.</p>';
+    html += '<div class="cmt-col-map">';
+    html += '<div><label>Employee ID is in column</label><select id="cmt-id-col-select">';
+    state.empHeaders.forEach(function(h, i){
+      html += '<option value="' + i + '"' + (i === state.empIdIdx ? ' selected' : '') + '>' + (norm(h) || '(column ' + (i+1) + ')') + '</option>';
+    });
+    html += '</select></div></div>';
+
+    html += '<div class="cmt-field-select-wrap">';
+    html += '<div class="cmt-field-select-label">Data to add to the Attendance Report — select one or more</div>';
+    html += '<p class="cmt-hint" style="margin:0 0 10px;">Every column found in this Employee List Report is listed below — including any extra ones beyond the usual Client Name, Last Name, or First Name.</p>';
+    html += '<div class="cmt-field-grid" id="cmt-field-grid">';
+    state.empHeaders.forEach(function(h, i){
+      if (i === state.empIdIdx) return;
+      var checked = state.fieldIdxs.indexOf(i) !== -1;
+      var label = norm(h) || ('Column ' + (i + 1));
+      html += '<label class="cmt-field-chip' + (checked ? ' checked' : '') + '" data-idx="' + i + '">' +
+        '<input type="checkbox" value="' + i + '"' + (checked ? ' checked' : '') + '>' +
+        '<span class="cmt-field-name">' + label + '</span>' +
+      '</label>';
+    });
+    html += '</div>';
+    html += '<div class="cmt-field-count-note" id="cmt-field-count-note"></div>';
+    html += '</div>';
+
+    empColmap.innerHTML = html;
+    empColmap.style.display = 'block';
+
+    $('cmt-id-col-select').addEventListener('change', function(e){
+      var newIdIdx = parseInt(e.target.value, 10);
+      state.empIdIdx = newIdIdx;
+      state.fieldIdxs = state.fieldIdxs.filter(function(i){ return i !== newIdIdx; });
+      recomputeDataMap();
+      renderFieldSelector();
+      updateEmpStatus();
+      updateGenerateEnabled();
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('#cmt-field-grid input[type=checkbox]'), function(cb){
+      cb.addEventListener('change', function(e){
+        var idx = parseInt(e.target.value, 10);
+        var chip = e.target.closest('.cmt-field-chip');
+        if (e.target.checked){
+          if (state.fieldIdxs.indexOf(idx) === -1) state.fieldIdxs.push(idx);
+          chip.classList.add('checked');
+        } else {
+          state.fieldIdxs = state.fieldIdxs.filter(function(i){ return i !== idx; });
+          chip.classList.remove('checked');
+        }
+        recomputeDataMap();
+        updateFieldCountNote();
+        updateGenerateEnabled();
+      });
+    });
+
+    updateFieldCountNote();
+  }
+
+  function updateFieldCountNote(){
+    var note = $('cmt-field-count-note');
+    if (!note) return;
+    if (state.fieldIdxs.length === 0){
+      note.className = 'cmt-field-count-note cmt-err';
+      note.textContent = 'Select at least one field to add to the Attendance Report.';
+    } else {
+      note.className = 'cmt-field-count-note';
+      note.textContent = state.fieldIdxs.length + ' field' + (state.fieldIdxs.length === 1 ? '' : 's') + ' will be added: ' + state.fieldNames.join(', ') + '.';
+    }
+  }
+
+  function updateEmpStatus(){
+    empStatus.className = 'cmt-status-line cmt-ok';
+    empStatus.textContent = state.dataMap.size + ' employee ID' + (state.dataMap.size === 1 ? '' : 's') + ' loaded from ' + state.empFileName + '.';
+  }
+
+  function handleEmployeeWorkbook(wb, fileName, source){
+    var sheetName = wb.SheetNames[0];
+    var ws = wb.Sheets[sheetName];
+    var aoa = sheetToAOA(ws);
+    if (aoa.length < 2){
+      empStatus.className = 'cmt-status-line cmt-err';
+      empStatus.textContent = 'That file does not appear to have any employee rows.';
+      return;
+    }
+    var headers = aoa[0];
+    var rows = aoa.slice(1);
+    var idIdx = detectEmpIdColumn(headers);
+    if (idIdx === -1) idIdx = 0;
+    var fieldIdxs = detectDefaultFieldIdxs(headers, idIdx);
+    if (fieldIdxs.length === 0){
+      var fallback = headers.length - 1 === idIdx ? headers.length - 2 : headers.length - 1;
+      if (fallback >= 0) fieldIdxs = [fallback];
+    }
+
+    var uploadedAt = new Date().toISOString();
+    finalizeEmployeeData(headers, rows, idIdx, fieldIdxs, fileName, uploadedAt);
+
+    saveLatestToStorage({
+      fileName: fileName,
+      uploadedAt: uploadedAt,
+      headers: headers,
+      rows: rows,
+      idIdx: idIdx,
+      fieldIdxs: fieldIdxs
+    });
+
+    state.employeeSource = source || 'new';
+    renderLatestBanner();
+  }
+
+  function renderLatestBanner(){
+    if (!state.empFileName) { latestWrap.innerHTML = ''; return; }
+    var when = '';
+    try { when = new Date(state.empUploadedAt).toLocaleString(); } catch(e){ when = state.empUploadedAt; }
+    latestWrap.innerHTML =
+      '<div class="cmt-latest-card">' +
+        '<div>' +
+          '<div class="cmt-latest-label">Currently used as reference</div>' +
+          '<div class="cmt-latest-name">' + state.empFileName + '</div>' +
+          '<div class="cmt-latest-meta">Uploaded ' + when + ' · ' + state.empRows.length + ' rows' +
+            (state.fieldNames.length ? ' · Adding: ' + state.fieldNames.join(', ') : '') +
+          '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  // ---------- employee upload wiring ----------
+  empDrop.addEventListener('click', function(){ empInput.click(); });
+  empDrop.addEventListener('dragover', function(e){ e.preventDefault(); empDrop.classList.add('cmt-drag'); });
+  empDrop.addEventListener('dragleave', function(){ empDrop.classList.remove('cmt-drag'); });
+  empDrop.addEventListener('drop', function(e){
+    e.preventDefault(); empDrop.classList.remove('cmt-drag');
+    if (e.dataTransfer.files.length) handleEmpFile(e.dataTransfer.files[0]);
+  });
+  empInput.addEventListener('change', function(e){
+    if (e.target.files.length) handleEmpFile(e.target.files[0]);
+  });
+
+  function handleEmpFile(file){
+    empStatus.className = 'cmt-status-line';
+    empStatus.textContent = 'Reading ' + file.name + '…';
+    readFileAsArrayBuffer(file).then(function(buf){
+      var wb = parseWorkbook(buf);
+      handleEmployeeWorkbook(wb, file.name, 'new');
+    }).catch(function(err){
+      empStatus.className = 'cmt-status-line cmt-err';
+      empStatus.textContent = 'Could not read that file: ' + err.message;
+    });
+  }
+
+  // ---------- attendance upload wiring ----------
+  attDrop.addEventListener('click', function(){ attInput.click(); });
+  attDrop.addEventListener('dragover', function(e){ e.preventDefault(); attDrop.classList.add('cmt-drag'); });
+  attDrop.addEventListener('dragleave', function(){ attDrop.classList.remove('cmt-drag'); });
+  attDrop.addEventListener('drop', function(e){
+    e.preventDefault(); attDrop.classList.remove('cmt-drag');
+    addAttendanceFiles(e.dataTransfer.files);
+  });
+  attInput.addEventListener('change', function(e){
+    addAttendanceFiles(e.target.files);
+    attInput.value = '';
+  });
+
+  function addAttendanceFiles(fileList){
+    for (var i = 0; i < fileList.length; i++){
+      state.attendanceFiles.push(fileList[i]);
+    }
+    renderAttList();
+    updateGenerateEnabled();
+  }
+
+  function removeAttendanceFile(idx){
+    state.attendanceFiles.splice(idx, 1);
+    renderAttList();
+    updateGenerateEnabled();
+  }
+
+  function renderAttList(){
+    if (state.attendanceFiles.length === 0){
+      attList.innerHTML = '<div class="cmt-empty-note">No attendance reports added yet.</div>';
+      return;
+    }
+    var html = '';
+    state.attendanceFiles.forEach(function(f, i){
+      var kb = (f.size / 1024).toFixed(0);
+      html += '<div class="cmt-file-row">' +
+        '<span class="cmt-file-name">' + f.name + '</span>' +
+        '<span class="cmt-file-meta">' + kb + ' KB</span>' +
+        '<button class="cmt-x-btn" data-idx="' + i + '" title="Remove">×</button>' +
+      '</div>';
+    });
+    attList.innerHTML = html;
+    Array.prototype.forEach.call(attList.querySelectorAll('.cmt-x-btn'), function(btn){
+      btn.addEventListener('click', function(){
+        removeAttendanceFile(parseInt(btn.getAttribute('data-idx'), 10));
+      });
+    });
+  }
+  renderAttList();
+
+  function updateGenerateEnabled(){
+    generateBtn.disabled = !(state.dataMap && state.dataMap.size > 0 && state.fieldIdxs.length > 0 && state.attendanceFiles.length > 0);
+  }
+
+  // ---------- sort order wiring ----------
+  Array.prototype.forEach.call(sortRadioWrap.querySelectorAll('input[name="cmt-sort-mode"]'), function(radio){
+    radio.addEventListener('change', function(e){
+      state.sortMode = e.target.value;
+    });
+  });
+
+  function updateSortAvailability(){
+    var clientRadio = sortRadioWrap.querySelector('input[value="client_az"]');
+    var hasClientColumn = state.clientColIdx !== -1 && state.clientSortMap && state.clientSortMap.size > 0;
+    if (!clientRadio) return;
+    clientRadio.disabled = !hasClientColumn;
+    if (!hasClientColumn){
+      if (state.sortMode === 'client_az'){
+        state.sortMode = 'original';
+        sortRadioWrap.querySelector('input[value="original"]').checked = true;
+      }
+      sortNote.className = 'cmt-status-line';
+      sortNote.textContent = state.empFileName ? 'No Client Name column detected in the Employee List — sorting by Client Name is unavailable.' : '';
+    } else {
+      sortNote.textContent = '';
+    }
+  }
+
+  // ---------- generate ----------
+  generateBtn.addEventListener('click', function(){
+    generateBtn.disabled = true;
+    generateStatus.textContent = 'Processing ' + state.attendanceFiles.length + ' file(s)…';
+    resultsSection.style.display = 'none';
+    lastOutputs = [];
+
+    var promises = state.attendanceFiles.map(function(file){
+      return readFileAsArrayBuffer(file).then(function(buf){
+        var wb = parseWorkbook(buf);
+        var sheetResults = [];
+        var totalMatched = 0, totalUnmatched = 0;
+        wb.SheetNames.forEach(function(sn){
+          var ws = wb.Sheets[sn];
+          var aoa = sheetToAOA(ws);
+          var result = processTabularSheet(aoa, state.dataMap, state.fieldNames);
+          var mode = 'tabular';
+          if (!result.changed){
+            result = processBlockSheet(aoa, state.dataMap, state.fieldNames);
+            mode = 'block';
+          }
+          var sortApplied = false, sortSkippedReason = '';
+          if (result.changed && state.sortMode === 'client_az' && state.clientSortMap && state.clientSortMap.size > 0){
+            if (mode === 'tabular'){
+              result.aoa = sortTabularRows(result.aoa, result.headerRow, result.idCol, state.clientSortMap);
+              sortApplied = true;
+            } else {
+              var sorted = sortBlockRows(result.aoa, state.clientSortMap);
+              if (sorted.changed){
+                result.aoa = sorted.aoa;
+                sortApplied = true;
+              } else {
+                sortSkippedReason = 'row layout not recognized for sorting';
+              }
+            }
+          }
+          if (result.changed){
+            var newWs = XLSX.utils.aoa_to_sheet(result.aoa);
+            wb.Sheets[sn] = newWs;
+            totalMatched += result.matched;
+            totalUnmatched += result.unmatched;
+          }
+          sheetResults.push({
+            name: sn,
+            changed: result.changed,
+            mode: mode,
+            matched: result.matched,
+            unmatched: result.unmatched,
+            unmatchedIds: result.unmatchedIds || [],
+            sortApplied: sortApplied,
+            sortSkippedReason: sortSkippedReason
+          });
+        });
+        var outName = generateOutputFilename(file.name);
+        var wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        var blob = new Blob([wbout], { type: 'application/octet-stream' });
+        return {
+          originalName: file.name,
+          outputName: outName,
+          blob: blob,
+          sheetResults: sheetResults,
+          totalMatched: totalMatched,
+          totalUnmatched: totalUnmatched
+        };
+      }).catch(function(err){
+        return { originalName: file.name, error: err.message };
+      });
+    });
+
+    Promise.all(promises).then(function(results){
+      lastOutputs = results;
+      renderResults(results);
+      generateStatus.textContent = 'Done.';
+      generateBtn.disabled = false;
+    });
+  });
+
+  function renderResults(results){
+    var grandMatched = 0, grandUnmatched = 0, fileCount = results.length;
+    results.forEach(function(r){
+      if (!r.error){ grandMatched += r.totalMatched; grandUnmatched += r.totalUnmatched; }
+    });
+
+    resultsSummary.innerHTML =
+      '<div class="cmt-stat"><div class="cmt-stat-num">' + fileCount + '</div><div class="cmt-stat-label">Files processed</div></div>' +
+      '<div class="cmt-stat"><div class="cmt-stat-num">' + grandMatched + '</div><div class="cmt-stat-label">Rows matched</div></div>' +
+      '<div class="cmt-stat"><div class="cmt-stat-num">' + grandUnmatched + '</div><div class="cmt-stat-label">Rows unmatched</div></div>';
+
+    var rowsHtml = '';
+    results.forEach(function(r, idx){
+      if (r.error){
+        rowsHtml += '<tr><td class="cmt-file-cell">' + r.originalName + '</td>' +
+          '<td colspan="3"><span class="cmt-badge err">Error</span><div class="cmt-sheet-note">' + r.error + '</div></td><td></td></tr>';
+        return;
+      }
+      var sheetsChanged = r.sheetResults.filter(function(s){ return s.changed; });
+      var sheetsSkipped = r.sheetResults.filter(function(s){ return !s.changed; });
+      var sheetNote = sheetsChanged.map(function(s){ return s.name; }).join(', ') || '—';
+      if (sheetsSkipped.length){
+        sheetNote += '<div class="cmt-sheet-note">No Employee ID reference found in: ' + sheetsSkipped.map(function(s){ return s.name; }).join(', ') + '</div>';
+      }
+      if (state.sortMode === 'client_az'){
+        var sortedSheets = sheetsChanged.filter(function(s){ return s.sortApplied; }).map(function(s){ return s.name; });
+        var notSortedSheets = sheetsChanged.filter(function(s){ return !s.sortApplied && s.sortSkippedReason; }).map(function(s){ return s.name; });
+        if (sortedSheets.length){
+          sheetNote += '<div class="cmt-sheet-note">Sorted by Client Name: ' + sortedSheets.join(', ') + '</div>';
+        }
+        if (notSortedSheets.length){
+          sheetNote += '<div class="cmt-sheet-note">Kept original order (layout not recognized): ' + notSortedSheets.join(', ') + '</div>';
+        }
+      }
+      var unmatchedBadge = r.totalUnmatched > 0
+        ? '<span class="cmt-badge warn">' + r.totalUnmatched + '</span>'
+        : '<span class="cmt-badge ok">0</span>';
+
+      var allUnmatchedIds = [];
+      r.sheetResults.forEach(function(s){ (s.unmatchedIds||[]).forEach(function(id){ if(allUnmatchedIds.indexOf(id)===-1) allUnmatchedIds.push(id); }); });
+      var unmatchedDetail = '';
+      var toggleId = 'cmt-unm-' + idx;
+      if (allUnmatchedIds.length){
+        unmatchedDetail = '<button class="cmt-unmatched-toggle" data-target="' + toggleId + '">View unmatched IDs</button>' +
+          '<div class="cmt-unmatched-list" id="' + toggleId + '">' + allUnmatchedIds.join(', ') + '</div>';
+      }
+
+      rowsHtml += '<tr>' +
+        '<td class="cmt-file-cell">' + r.originalName + '<div class="cmt-sheet-note">→ ' + r.outputName + '</div></td>' +
+        '<td>' + sheetNote + '</td>' +
+        '<td><span class="cmt-badge ok">' + r.totalMatched + '</span></td>' +
+        '<td>' + unmatchedBadge + unmatchedDetail + '</td>' +
+        '<td><button class="cmt-btn cmt-btn-sm" data-idx="' + idx + '">Download</button></td>' +
+      '</tr>';
+    });
+    resultsBody.innerHTML = rowsHtml;
+
+    Array.prototype.forEach.call(resultsBody.querySelectorAll('button[data-idx]'), function(btn){
+      btn.addEventListener('click', function(){
+        var r = lastOutputs[parseInt(btn.getAttribute('data-idx'), 10)];
+        if (r && r.blob) downloadBlob(r.blob, r.outputName);
+      });
+    });
+    Array.prototype.forEach.call(resultsBody.querySelectorAll('.cmt-unmatched-toggle'), function(btn){
+      btn.addEventListener('click', function(){
+        var el = document.getElementById(btn.getAttribute('data-target'));
+        if (el) el.classList.toggle('open');
+      });
+    });
+
+    var validOutputs = results.filter(function(r){ return !r.error; });
+    if (validOutputs.length > 1 && window.JSZip){
+      downloadAllBtn.style.display = 'inline-block';
+      downloadAllBtn.onclick = function(){
+        var zip = new JSZip();
+        validOutputs.forEach(function(r){ zip.file(r.outputName, r.blob); });
+        zip.generateAsync({ type: 'blob' }).then(function(content){
+          downloadBlob(content, 'Processed_Attendance_Reports.zip');
+        });
+      };
+    } else {
+      downloadAllBtn.style.display = 'none';
+    }
+
+    resultsSection.style.display = 'block';
+  }
+
+  // ---------- init: check for stored employee list ----------
+  loadLatestFromStorage().then(function(saved){
+    if (saved && saved.headers && saved.rows){
+      var savedFieldIdxs = saved.fieldIdxs || (saved.nameIdx !== undefined && saved.nameIdx !== -1 ? [saved.nameIdx] : []);
+      empRadioWrap.innerHTML =
+        '<div class="cmt-radio-row">' +
+          '<label class="cmt-radio-opt"><input type="radio" name="cmt-emp-source" value="latest" checked> Use latest Employee List Report</label>' +
+          '<label class="cmt-radio-opt"><input type="radio" name="cmt-emp-source" value="new"> Upload a new Employee List Report</label>' +
+        '</div>';
+      empUploadWrap.style.display = 'none';
+      finalizeEmployeeData(saved.headers, saved.rows, saved.idIdx, savedFieldIdxs, saved.fileName, saved.uploadedAt);
+      state.employeeSource = 'latest';
+      renderLatestBanner();
+
+      Array.prototype.forEach.call(empRadioWrap.querySelectorAll('input[name="cmt-emp-source"]'), function(radio){
+        radio.addEventListener('change', function(e){
+          if (e.target.value === 'new'){
+            empUploadWrap.style.display = 'block';
+            state.dataMap = null;
+            state.fieldIdxs = [];
+            state.fieldNames = [];
+            state.empFileName = '';
+            empColmap.style.display = 'none';
+            empStatus.textContent = '';
+            latestWrap.innerHTML = '';
+            updateGenerateEnabled();
+          } else {
+            empUploadWrap.style.display = 'none';
+            finalizeEmployeeData(saved.headers, saved.rows, saved.idIdx, savedFieldIdxs, saved.fileName, saved.uploadedAt);
+            state.employeeSource = 'latest';
+            renderLatestBanner();
+          }
+        });
+      });
+    }
+  });
+
+})();
+</script>
